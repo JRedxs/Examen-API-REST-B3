@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from databases import Database
 from pydantic import BaseModel, utils
@@ -26,24 +26,25 @@ class Commande(BaseModel):
 
 @app.post("/article")
 async def AddArticles(Articles: ArticleTest):
-    if Articles.id_article not in Articles:
-        db.execute("INSERT into Article VALUES(?,?,?,?)", (Articles.id_article,
+
+     cursor.execute("SELECT * FROM Article WHERE id=?", (Articles.id_article,))
+     if cursor.fetchone() is not None:
+        raise HTTPException(status_code=409, detail="Article avec le même Id déjà existants")
+   
+     db.execute("INSERT into Article VALUES(?,?,?,?)", (Articles.id_article,
                                                             Articles.name, Articles.description, Articles.quantity,))
-        db.commit()
-    else:
-        return{"ID deja existant"}
-    return Articles
+     db.commit()
+     return Articles
     
 
 @app.get("/articles/{articleId}")
 async def getArticles(articleId: int):
     cursor.execute("SELECT * FROM Article WHERE id=?", (articleId,))
     article = cursor.fetchone()
-
     if article:
         return {"article": article}
     else:
-        return {"error": "Article not found"}
+        raise HTTPException(status_code=404, detail="ID inexistant")
 
 @app.put("/articles")
 async def putArticles(Articles: ArticleTest):
@@ -53,9 +54,6 @@ async def putArticles(Articles: ArticleTest):
     return Articles
 
 
-@app.post("/commands")
-async def postCommand(Commandes: Commande):
-    pass
 
 @app.get("/articles")
 def get_articles():
@@ -66,3 +64,19 @@ def get_articles():
             for row in result:
                 articles.append({"id": row[0], "name": row[1], "description": row[2], "quantity": row[3]})
             return {"Article": articles}
+
+@app.post("/commands")
+async def postCommand(Commandes: Commande):
+    pass
+
+@app.get("/commands")
+
+async def getCommand(Commandes: Commande):
+            sql = "SELECT * FROM Commande"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            commande = []
+            for row in result:
+                commande.append({"id": row[0], "listArticle": row[1], "status": row[2]})
+            return {"Commande": commande}
+ 
