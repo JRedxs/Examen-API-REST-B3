@@ -5,6 +5,10 @@ from pydantic import BaseModel, utils
 import sqlite3
 from sqlite3 import Error
 
+db = sqlite3.connect("services.db")
+
+cursor = db.cursor()
+
 app = FastAPI()
 
 
@@ -22,7 +26,9 @@ class Commande(BaseModel):
 
 @app.post("/articles")
 async def Articles(Articles: Article):
-    pass
+    db.execute("INSERT INTO Articles(?,?,?,?)", (Article.id,Article.name,Article.description,Article.quantity))
+    db.commit()
+    return Articles
 
 
 @app.get("/articles/{articleId}")
