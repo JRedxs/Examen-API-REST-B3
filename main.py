@@ -59,8 +59,10 @@ async def postCommand(Commandes: Commande):
 
 @app.get("/articles")
 def get_articles():
-            cursor.execute("SELECT * FROM Article")
-            rows = cursor.fetchall()
-            for row in rows:
-                print(row)
-            return {"Article" : rows}
+            sql = "SELECT * FROM Article"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            articles = []
+            for row in result:
+                articles.append({"id": row[0], "name": row[1], "description": row[2], "quantity": row[3]})
+            return {"Article": articles}
