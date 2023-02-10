@@ -67,7 +67,9 @@ def get_articles():
 
 @app.post("/commands")
 async def postCommand(Commandes: Commande):
-    pass
+            db.execute("INSERT INTO Commande VALUES(?,?,?)", (Commandes.id,Commandes.listArticle,Commandes.status))
+            db.commit() #on doit ajouter une relation entre Commande et articles foreign key je pense 
+            return Commandes
 
 @app.get("/commands")
 

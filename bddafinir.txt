@@ -1,0 +1,14 @@
+CREATE TABLE Articles(
+		id_article INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT,
+		description TEXT,
+		quantity INTEGER,
+)
+
+CREATE TABLE Commandes(
+		id_commande INTEGER PRIMARY KEY AUTOINCREMENT,
+		status TEXT,
+		FOREIGN KEY (id_commande) REFERENCES Articles(id_article)
+
+)
+	
