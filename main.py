@@ -4,8 +4,9 @@ from databases import Database
 from pydantic import BaseModel, utils
 import sqlite3
 from sqlite3 import Error
+from typing import List
 
-db = sqlite3.connect("services.db", check_same_thread=False)
+db = sqlite3.connect("testbdd.db", check_same_thread=False)
 
 cursor = db.cursor()
 
@@ -13,26 +14,29 @@ app = FastAPI()
 
 
 class ArticleTest(BaseModel):
-    id_article: int
+    id: int
     name: str
     description: str
     quantity: int
 
 class Commande(BaseModel):
     id: int
-    id_articles : int
-    listArticle: utils.List[ArticleTest]
     status: str
+
+class ArticleCommande(BaseModel):
+    id: int
+    id_articles: int
+    id_commandes: int
 
 
 @app.post("/article")
 async def AddArticles(Articles: ArticleTest):
 
-     cursor.execute("SELECT * FROM Article WHERE id=?", (Articles.id_article,))
+     cursor.execute("SELECT * FROM Articles WHERE id=?", (Articles.id,))
      if cursor.fetchone() is not None:
         raise HTTPException(status_code=409, detail="Article avec le même Id déjà existants")
    
-     db.execute("INSERT into Articles VALUES(?,?,?,?)", (Articles.id_article,
+     db.execute("INSERT into Articles VALUES(?,?,?,?)", (Articles.id,
                                                             Articles.name, Articles.description, Articles.quantity,))
      db.commit()
      return Articles
@@ -40,7 +44,7 @@ async def AddArticles(Articles: ArticleTest):
 
 @app.get("/articles/{articleId}")
 async def getArticles(articleId: int):
-    cursor.execute("SELECT * FROM Article WHERE id=?", (articleId,))
+    cursor.execute("SELECT * FROM Articles WHERE id=?", (articleId,))
     article = cursor.fetchone()
     if article:
         return {"article": article}
@@ -49,16 +53,22 @@ async def getArticles(articleId: int):
 
 @app.put("/articles")
 async def putArticles(Articles: ArticleTest):
-    db.execute("UPDATE Article SET name=?, description=?, quantity=? WHERE id = ?", (Articles.name,Articles.description,Articles.quantity,Articles.id_article))
-    db.commit()
-
-    return Articles
+    cursor.execute("SELECT * FROM Articles WHERE id=?", (Articles.id,))
+    if cursor.fetchone() is None:
+        db.execute("INSERT into Articles VALUES(?,?,?,?)", (Articles.id,
+                                                            Articles.name, Articles.description, Articles.quantity,))
+        db.commit()
+        return Articles
+    else:
+        db.execute("UPDATE Articles SET name=?, description=?, quantity=? WHERE id = ?", (Articles.name,Articles.description,Articles.quantity,Articles.id))
+        db.commit()
+        return Articles
 
 
 
 @app.get("/articles")
 def get_articles():
-            sql = "SELECT * FROM Article"
+            sql = "SELECT * FROM Articles"
             cursor.execute(sql)
             result = cursor.fetchall()
             articles = []
@@ -66,20 +76,46 @@ def get_articles():
                 articles.append({"id": row[0], "name": row[1], "description": row[2], "quantity": row[3]})
             return {"Article": articles}
 
-@app.post("/commands")
-async def postCommand(Commandes: Commande):
-            db.execute("INSERT INTO Commande VALUES(?,?,?)", (Commandes.id,Commandes.listArticle,Commandes.status))
-            db.commit() #on doit ajouter une relation entre Commande et articles foreign key je pense 
-            return Commandes
 
 @app.get("/commands")
-
-async def getCommand(Commandes: Commande):
-            sql = "SELECT * FROM Commande"
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            commande = []
-            for row in result:
-                commande.append({"id": row[0], "listArticle": row[1], "status": row[2]})
-            return {"Commande": commande}
+async def getCommand():
+        sql = """
+        SELECT c.id, c.status, 
+        group_concat(a.name) AS articles,
+        group_concat(a.quantity) AS quantities,
+        group_concat(a.description) AS descriptions
+        FROM Commandes c
+        JOIN ArticleCommande ac ON c.id = ac.id_commandes
+        JOIN Articles a ON ac.id_articles = a.id
+        GROUP BY c.id
+            """
+        cursor.execute(sql)
+        
+        result = cursor.fetchall()
+            
+        commands = []
+        for row in result:
+            articles = row[2].split(",")
+            quantities = row[3].split(",")
+            descriptions = row[4].split(",")
+            articles_list = []
+            for i in range(len(articles)):
+                article = {"name": articles[i], "quantity": quantities[i], "description": descriptions[i]}
+                articles_list.append(article)
+            command = {"id": row[0], "articles": articles_list, "status": row[1]}
+            commands.append(command)
+        return commands
  
+@app.post("/commandes")
+async def post_commande(commande: Commande, articles: List[ArticleTest]):
+    cursor.execute("INSERT INTO Commandes (status) VALUES (?)", (commande.status,))
+    commande_id = cursor.lastrowid
+
+    for article in articles:
+        cursor.execute("SELECT * FROM Articles WHERE id = ?", (article.id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Article non trouvé par l'id {}".format(article.id))
+        cursor.execute("INSERT INTO ArticleCommande (id_articles, id_commandes) VALUES (?, ?)", (article.id, commande_id))
+
+    db.commit()
+    return {"commande": commande, "articles": articles}
