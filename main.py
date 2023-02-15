@@ -20,6 +20,7 @@ class ArticleTest(BaseModel):
 
 class Commande(BaseModel):
     id: int
+    id_articles : int
     listArticle: utils.List[ArticleTest]
     status: str
 
@@ -31,7 +32,7 @@ async def AddArticles(Articles: ArticleTest):
      if cursor.fetchone() is not None:
         raise HTTPException(status_code=409, detail="Article avec le même Id déjà existants")
    
-     db.execute("INSERT into Article VALUES(?,?,?,?)", (Articles.id_article,
+     db.execute("INSERT into Articles VALUES(?,?,?,?)", (Articles.id_article,
                                                             Articles.name, Articles.description, Articles.quantity,))
      db.commit()
      return Articles
