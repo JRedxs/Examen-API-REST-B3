@@ -124,6 +124,8 @@ async def post_commande(commande: Commande, articles: List[ArticleTest]):
     db.commit()
     return {"commande": commande, "articles": articles}
 
+
+"""Fonction pour modifier une commande"""
 @app.put("/commandes")
 async def put_commande(Commande: Commande, articles: List[ArticleTest]):
     cursor.execute("SELECT * FROM Commandes WHERE id=?", (Commande.id))
