@@ -123,3 +123,15 @@ async def post_commande(commande: Commande, articles: List[ArticleTest]):
 
     db.commit()
     return {"commande": commande, "articles": articles}
+
+@app.put("/commandes")
+async def put_commande(Commande: Commande, articles: List[ArticleTest]):
+    cursor.execute("SELECT * FROM Commandes WHERE id=?", (Commande.id))
+    if cursor.fetchone() is None:
+        db.execute("INSERT into Commandes VALUES(?,?)", (Commande.id,Commande.status))
+        db.commit()
+        return Commande
+    else:
+        db.execute("UPDATE Commandes SET status=? WHERE id = ?", (Commande.status,Commande.id,articles))
+        db.commit()
+        return Commande
