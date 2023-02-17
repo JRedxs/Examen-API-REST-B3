@@ -12,23 +12,25 @@ cursor = db.cursor()
 
 app = FastAPI()
 
-
+#Model Article
 class ArticleTest(BaseModel):
     id: int
     name: str
     description: str
     quantity: int
 
+#Model Commande
 class Commande(BaseModel):
     id: int
     status: str
 
+#Model Article Commande
 class ArticleCommande(BaseModel):
     id: int
     id_articles: int
     id_commandes: int
 
-
+#API pour ajouter un article 
 @app.post("/article")
 async def AddArticles(Articles: ArticleTest):
 
@@ -41,7 +43,7 @@ async def AddArticles(Articles: ArticleTest):
      db.commit()
      return Articles
     
-
+#API pour récupérer un article en fonction de son ID
 @app.get("/articles/{articleId}")
 async def getArticles(articleId: int):
     cursor.execute("SELECT * FROM Articles WHERE id=?", (articleId,))
@@ -51,6 +53,7 @@ async def getArticles(articleId: int):
     else:
         raise HTTPException(status_code=404, detail="ID inexistant")
 
+#API pour modifier un article 
 @app.put("/articles")
 async def putArticles(Articles: ArticleTest):
     cursor.execute("SELECT * FROM Articles WHERE id=?", (Articles.id,))
@@ -65,7 +68,7 @@ async def putArticles(Articles: ArticleTest):
         return Articles
 
 
-
+#API pour récupérer tous les articles
 @app.get("/articles")
 def get_articles():
             sql = "SELECT * FROM Articles"
@@ -76,7 +79,7 @@ def get_articles():
                 articles.append({"id": row[0], "name": row[1], "description": row[2], "quantity": row[3]})
             return {"Article": articles}
 
-
+#API pour récupérer la commande
 @app.get("/commands")
 async def getCommand():
         sql = """
@@ -105,7 +108,8 @@ async def getCommand():
             command = {"id": row[0], "articles": articles_list, "status": row[1]}
             commands.append(command)
         return commands
- 
+
+#API pour ajouter une commande
 @app.post("/commandes")
 async def post_commande(commande: Commande, articles: List[ArticleTest]):
     cursor.execute("INSERT INTO Commandes (status) VALUES (?)", (commande.status,))
